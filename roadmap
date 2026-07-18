@@ -36,6 +36,10 @@ Added visible soft-delete actions for accounts, categories, budgets, goals, tran
 
 Verification after this pass: `npm run typecheck`, `npm test` (20 tests including the App shell component test), `npm run e2e` (5 tests), `npm run build`, `npm run format:check`, and `npm run release:check` all pass. Local browser screenshots were checked at desktop and 390x844 iPhone portrait. Production GitHub Pages and real-device standalone PWA still require deployment/device verification.
 
+## Production deployment update — 2026-07-18
+
+Commit `47ca7a1` was pushed to `main`. GitHub Actions run `Finance PWA CI #3` completed successfully, including verification and the Pages deployment job. The production URL now serves the reference dashboard build. The manifest resolves under `/finance-pwa/manifest.webmanifest`, and the release E2E suite verifies the iPhone-sized responsive layout and no horizontal overflow. Installation and standalone behavior on a physical iPhone remain a device-only verification step.
+
 ## Stage 3 verification update — completed 2026-07-18
 
 Local test configuration is now present in `.env.local` for the supplied web OAuth client ID. The intended authorized JavaScript origin is `http://localhost:5173`.
