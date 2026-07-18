@@ -7,7 +7,7 @@ declare global { interface Window { google?: GoogleIdentity } }
 const GIS_URL = 'https://accounts.google.com/gsi/client';
 const STATE_KEY = 'finance-pwa:google-oauth-state';
 const SESSION_KEY = 'finance-pwa:google-session';
-const CALLBACK_PATH = '/oauth/callback';
+const CALLBACK_PATH = `${import.meta.env.BASE_URL}oauth/callback`;
 
 function loadGIS(): Promise<void> {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
@@ -44,7 +44,7 @@ export function consumeGoogleRedirect(): GoogleRedirectResult | null {
   if (!accessToken || !Number.isFinite(expiresIn) || expiresIn <= 0) return { error: 'Google OAuth не вернул access token.' };
   const session = { accessToken, expiresAt: Date.now() + expiresIn * 1000 };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  window.history.replaceState({}, '', '/');
+  window.history.replaceState({}, '', import.meta.env.BASE_URL);
   return { session };
 }
 
