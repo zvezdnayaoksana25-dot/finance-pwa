@@ -1,0 +1,8 @@
+node_modules/
+dist/
+test-results/
+.env.local
+.env.*.local
+output/
+debug.log
+tsconfig.tsbuildinfo

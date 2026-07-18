@@ -1,0 +1,540 @@
+# Roadmap — Finance PWA
+
+## Design track — visual direction and acceptance
+
+The product UI follows the supplied reference: dark-first Liquid Glass finance dashboard with navy depth, blue/cyan primary accents, translucent grouped surfaces, restrained glow, strong amount hierarchy and a persistent central “+” action. This track may change presentation and the application navigation/UI layer where required for a working screen. Domain rules, data contracts, storage, sync, OAuth and API architecture remain stable unless a documented missing capability requires a minimal additive change.
+
+### Completed visual scope — Stages 1–3
+
+- Reworked the application shell, dashboard surfaces, quick actions, transaction rows, account cards, planning cards, modal forms, FAB and bottom navigation.
+- Added responsive desktop two-column composition and mobile single-column composition with iPhone safe-area support.
+- Added consistent glass tokens: border, blur, radius, elevation, focus state, primary blue, income green and expense/error red.
+- Kept existing handlers, selectors, forms, persistence and Google Sync flows intact while introducing a screen state and shared SVG icon system.
+- Added real screens for overview, quick add, operations, accounts, budgets, goals, statistics, categories, settings and synchronization.
+- Added a real custom-category form and real statistics derived from local transactions; these are the only new application-level behaviors in this pass.
+- Added reduced-motion handling and visible keyboard focus states.
+
+### Visual scope for future stages
+
+- Stage 4: charts, exchange-rate cards, period filters and exports use the same dashboard grid and data-state treatment.
+- Stage 5: onboarding, settings, offline/sync states, PWA standalone mode and safe-area behavior receive the same component-level polish and accessibility checks.
+- Stage 6: release gate includes desktop and iPhone screenshots/smoke checks, no overflow, no unreadable contrast and no visually empty implemented screen.
+
+### Design definition of done
+
+Every visible feature must have loading, success, validation/error, empty and offline/pending states where applicable; use real data and existing application logic. A visual task is complete only when `npm run test`, `npm run build` and the relevant Playwright smoke flow pass.
+
+### Current implementation note
+
+The reference-aligned shell and all 10 screen entry points are implemented. Pixel-level parity still requires iterative browser screenshot comparison at the target desktop and iPhone dimensions. Google OAuth remains environment-dependent: the configured client must accept the exact current origin and `/oauth/callback` redirect URI.
+
+## Stage 3 verification update — completed 2026-07-18
+
+Local test configuration is now present in `.env.local` for the supplied web OAuth client ID. The intended authorized JavaScript origin is `http://localhost:5173`.
+
+Manual browser verification on `http://localhost:5173` passed for app loading, Google Sync action initiation, loading/disabled state, and recovery from an unavailable OAuth window. The OAuth failure now resolves after 10 seconds with a user-facing retry message instead of leaving the action stuck.
+
+The local OAuth flow was changed to a redirect-based implicit token flow for popup-restricted browsers. Manual verification reached the Google account chooser with the supplied client ID. Google then returned the precise `redirect_uri_mismatch` error: the requested URI is `http://localhost:5173/oauth/callback`, but that exact URI is not registered under the same OAuth Web Client ID. No access token was received and no spreadsheet write was attempted.
+
+## Stage 5 verification update — completed 2026-07-18
+
+Stage 5 production UX and PWA hardening is implemented for the current application scope:
+
+- Added a production Web App Manifest with stable manifest ID, standalone display mode, portrait orientation, theme/background colors, iOS metadata and the supplied Finance icon in 192px/512px app-icon entries.
+- Added a versioned Service Worker that precaches the application shell, caches successful navigation/assets, removes old cache versions and falls back to the cached shell when the network is unavailable.
+- Registered the Service Worker from the application entry point without changing domain or sync contracts.
+- Added a real onboarding screen with the first-run flow, local-first explanation, account creation entry point and PWA installation guidance for Safari/iPhone.
+- Persisted the light/dark theme preference in local storage and added a browser `beforeinstallprompt` installation flow where supported.
+- Added online/offline event handling with user-facing recovery messages; Google sync now keeps local changes queued and avoids starting a network request while offline.
+- Added Stage 5 responsive onboarding styles, 44px interaction targets, reduced-motion compatibility and safe-area-compatible layout behavior.
+- Added Playwright coverage for manifest metadata, onboarding navigation, theme switching and offline quick-add persistence.
+
+Verification completed:
+
+- `npm test`: 4 test files, 19/19 tests passed.
+- `npm run e2e`: 4/4 Playwright smoke tests passed, including the new Stage 5 offline flow.
+- `npm run build`: TypeScript check and Vite production build passed.
+
+The supplied icon is preserved as JPEG because the source attachment is JPEG; Chromium and iOS manifest/apple-touch-icon loading are covered by the browser smoke flow. Real-device App Store/iPhone Safari installation remains a Stage 6 release-device check.
+
+Follow-up browser smoke test after the Google configuration propagated passed: redirect OAuth completed, the app returned to `http://localhost:5173`, created the Google spreadsheet/sheet structure, showed the sync success state, preserved a local account and `125 RUB` expense across navigation, and uploaded those real local records on a subsequent sync using the existing unexpired access token without reopening OAuth. The earlier mismatch was transient configuration propagation.
+
+Implemented and verified locally:
+
+- Google Identity Services token flow with a required `VITE_GOOGLE_CLIENT_ID`; no client secret or refresh token is stored in frontend code.
+- Google Drive search and spreadsheet creation through the real REST API.
+- Creation of the required human-readable sheets and UUID/`updatedAt`/`deletedAt`/JSON payload row schema.
+- Google Sheets upload adapter with retry and exponential backoff for transient API failures and explicit 401/403/404/429 handling.
+- Bidirectional cloud/local merge by UUID and `updatedAt`, including imported soft deletes.
+- Durable local sync queue populated on local changes, exponential retry scheduling on failures, and clearing only after successful cloud write.
+- Last Write Wins comparison and cloud-row serialization tests.
+- A user-facing Google Sync action with loading and error states.
+- Token expiry/401 recovery by clearing the expired session and restarting OAuth redirect.
+- Automated verification: unit/integration 14/14 passed, Playwright E2E 2/2 passed, TypeScript check and production build passed.
+
+Stage 3 is complete for the configured local Google environment. The real browser smoke test completed OAuth, found/created the `Finance PWA` spreadsheet, synchronized local records, and repeated synchronization with the existing token. Google Cloud must retain the Sheets/Drive APIs and `http://localhost:5173` authorized origin plus `/oauth/callback` redirect URI for this local setup. The client ID is public configuration and is kept in ignored `.env.local`; no client secret or refresh token is stored in frontend code.
+
+## Stage 1 status — completed 2026-07-18
+
+### Verification update — Stage 1 functional gaps closed 2026-07-18
+
+The account form no longer uses browser prompts; IndexedDB-backed persistence, balance calculations, transfer accounting, transaction editing/soft delete, and browser-verified end-to-end flows are now active. Cloud integrations and exchange-rate API remain future stages.
+
+Implemented and verified:
+
+- React + TypeScript + Vite production application shell with responsive iPhone safe-area layout, light/dark theme, bottom navigation and central “+” action.
+- Domain model with UUIDs for accounts, categories, transactions and transfers; money is stored in minor units with original currency and operation-time conversion fields.
+- Strict amount, transaction and transfer validation, including zero/negative/malformed values and same-account transfer rejection.
+- Local-first persistence through the versioned Dexie/IndexedDB repositories; no demo records are created.
+- Quick income, expense and transfer forms with RUB/USD selection, date/time, note, account/category selection and custom category creation.
+- Account creation, standard category seeding, transaction editing and soft deletion.
+- Real user-facing validation errors and empty states.
+- Unit and integration test suite: 9/9 passed.
+- Production build: passed.
+- Playwright E2E smoke tests for quick expense and account → operation → balance → reload: 2/2 passed.
+
+Stage 1 is complete for the implemented scope. IndexedDB repositories and the core balance/planning logic were completed in Stage 2; Google OAuth/Drive/Sheets were completed in Stage 3. Exchange-rate API, expanded analytics and production PWA hardening remain scheduled for Stages 4–6.
+
+## Общая цель
+
+Создать полностью готовое production-приложение для учёта финансов без серверной базы данных, с локальной IndexedDB, Google OAuth, Google Drive/Sheets синхронизацией, офлайн-режимом, курсами RUB/USD, бюджетами, статистикой и финансовыми целями.
+
+Каждый этап заканчивается автоматическими тестами. Этап нельзя считать завершённым, если функциональность существует только визуально или работает на тестовых заглушках.
+
+---
+
+## Этап 1. Доменная модель и UX быстрых действий
+
+### Дизайн-критерии
+
+Быстрый ввод, баланс, список операций и FAB оформлены в едином dark-first glass shell; форма не меняет существующие поля и обработчики, а на мобильном экране не перекрывается safe area.
+
+### Цель
+
+Зафиксировать предметную область и реализовать основной пользовательский опыт: быстрый ввод дохода, расхода и перевода.
+
+### Что реализовать
+
+1. Создать доменные типы:
+   - Account;
+   - Category;
+   - Transaction;
+   - Transfer;
+   - Budget;
+   - Goal;
+   - GoalAllocation;
+   - ExchangeRate;
+   - SyncQueueItem.
+2. Добавить UUID для всех сущностей.
+3. Реализовать денежный тип с минимальными единицами.
+4. Реализовать валидацию суммы, валюты, счёта и категории.
+5. Создать нижнюю навигацию.
+6. Создать центральную кнопку «+».
+7. Реализовать формы:
+   - расход;
+   - доход;
+   - перевод между счетами.
+8. Добавить стандартные категории.
+9. Добавить создание собственной категории.
+10. Добавить редактирование и soft delete операций.
+11. Автоматически подставлять дату и время с возможностью изменения.
+12. Добавить светлую и тёмную тему.
+13. Реализовать адаптивность под iPhone и safe areas.
+
+### Автоматические тесты
+
+- расчёт и округление денежных значений;
+- валидация нулевой, отрицательной и слишком большой суммы;
+- создание дохода;
+- создание расхода;
+- создание перевода;
+- запрет перевода на тот же счёт;
+- сохранение исходной валюты;
+- генерация уникальных ID;
+- создание и архивирование категории;
+- редактирование операции;
+- soft delete операции;
+- отображение формы быстрого ввода;
+- E2E: открыть приложение → нажать «+» → добавить расход → увидеть его в списке.
+
+### Критерий выхода
+
+Пользователь может быстро создать, изменить и удалить реальную локальную операцию или перевод. Нет визуальных кнопок без логики.
+
+---
+
+## Этап 2. Локальная база и финансовая логика
+
+### Статус обновления — Этапы 1–2 выполнены 2026-07-18
+
+Реализованы и подключены к UI Dexie-репозитории с версионируемой IndexedDB-схемой для всех доменных сущностей: `Account`, `Category`, `Transaction`, `Transfer`, `Budget`, `Goal`, `GoalAllocation`, `ExchangeRate` и `SyncQueueItem`. Добавлены рабочие формы счёта без `prompt`, локальные начальные балансы, расчёт балансов RUB/USD и переводов, бюджеты с периодами и предупреждением, цели с прогрессом и рекомендациями день/неделя/месяц, распределения целей, поиск/фильтры/сортировка операций, миграция прежних `localStorage`-данных и восстановление после перезагрузки. Добавлены integration, domain и E2E-тесты.
+
+### Цель
+
+### Дизайн-критерии
+
+Карточки счетов, бюджетов и целей, progress bars, фильтры, поиск и empty states используют общую сетку и визуальные токены Stage 1. Реальные RUB/USD значения остаются источником отображения.
+
+Сделать IndexedDB полноценной рабочей базой приложения и добавить расчёт балансов, бюджетов и целей.
+
+### Что реализовать
+
+1. ✅ Подключить Dexie и создать версионируемую схему IndexedDB.
+2. ✅ Реализовать репозитории для всех сущностей.
+3. ✅ Реализовать начальные балансы счетов.
+4. ✅ Рассчитывать текущие балансы:
+   - доходы увеличивают баланс;
+   - расходы уменьшают баланс;
+   - переводы перемещают деньги между счетами.
+5. ✅ Реализовать отдельные балансы RUB и USD.
+6. ✅ Реализовать бюджеты:
+   - месячные;
+   - недельные;
+   - пользовательские периоды;
+   - предупреждения о превышении.
+7. ✅ Реализовать финансовые цели:
+   - сумма;
+   - дата окончания;
+   - прогресс;
+   - остаток;
+   - рекомендуемая сумма в день/неделю/месяц.
+8. ✅ Реализовать виртуальные распределения денег на цели.
+9. ✅ Реализовать экран обзора с реальными данными.
+10. ✅ Реализовать поиск, фильтры и сортировку операций.
+
+### Автоматические тесты
+
+- миграции IndexedDB;
+- CRUD для каждой сущности;
+- расчёт баланса одного счёта;
+- расчёт балансов после перевода;
+- расчёт нескольких валют отдельно;
+- бюджет до лимита;
+- бюджет после превышения;
+- расчёт процента выполнения цели;
+- расчёт суммы, необходимой до даты цели;
+- удаление распределения цели без удаления операции;
+- фильтрация по периоду, категории, счёту и типу;
+- восстановление состояния после перезагрузки страницы;
+- E2E: создать счёт → добавить операцию → проверить баланс;
+- E2E: создать цель → добавить распределение → проверить прогресс.
+
+### Критерий выхода
+
+Приложение работает локально без сервера и без тестовых данных. Балансы, бюджеты и цели рассчитываются только из реальных записей пользователя.
+
+---
+
+## Этап 3. Google OAuth, Drive и Sheets
+
+### Дизайн-критерии
+
+Состояния OAuth и синхронизации отображаются через заметные glass notices/cards: loading, success, retry, 401/403/429 и pending queue. Визуальная обработка не скрывает ошибку и не меняет API flow.
+
+### Цель
+
+Подключить реальную Google-авторизацию и облачную синхронизацию без demo-режима.
+
+### Что реализовать
+
+1. Настроить Google Identity Services.
+2. Использовать production OAuth client configuration.
+3. Реализовать вход и выход пользователя.
+4. Обработать истечение access token.
+5. После первого входа:
+   - создать Google Таблицу;
+   - создать необходимые листы;
+   - записать заголовки схемы;
+   - сохранить ID таблицы локально.
+6. При повторном входе находить существующую таблицу.
+7. Реализовать экспорт локальных данных в таблицу.
+8. Реализовать импорт данных из таблицы.
+9. Реализовать двустороннюю синхронизацию.
+10. Добавить sync queue.
+11. Добавить retry с exponential backoff.
+12. Реализовать `updatedAt`, `deviceId` и `deletedAt`.
+13. Реализовать Last Write Wins.
+14. Добавить понятный статус:
+   - синхронизировано;
+   - синхронизация выполняется;
+   - ожидает сети;
+   - ошибка авторизации;
+   - ошибка Google API.
+15. Добавить восстановление локальной базы из Google Sheets.
+16. Сделать таблицу читаемой для ручного пользователя.
+
+### Автоматические тесты
+
+- OAuth callback с валидным результатом;
+- отказ пользователя в разрешении;
+- истечение access token;
+- обработка 401, 403, 404 и 429;
+- создание структуры таблицы;
+- корректные заголовки листов;
+- сериализация операции в строку;
+- импорт строки обратно в доменную сущность;
+- добавление новой операции в sync queue;
+- повторная отправка после сетевой ошибки;
+- soft delete-синхронизация;
+- конфликт двух устройств;
+- Last Write Wins;
+- восстановление базы из таблицы;
+- E2E с Google API через отдельный тестовый OAuth-проект или контролируемый контрактный стенд, без подмены production-функции в приложении.
+
+### Критерий выхода
+
+Пользователь авторизуется реальным Google-аккаунтом, таблица реально создаётся, данные реально сохраняются и восстанавливаются на другом устройстве.
+
+---
+
+## Этап 4. Валюты, курсы и расширенная аналитика
+
+### Статус обновления — Этап 4 выполнен 2026-07-18
+
+Реализованы рабочий адаптер Currency API Frankfurter/ECB с таймаутом, кэшем и fallback на последний курс в IndexedDB, конвертация RUB/USD с фиксацией курса в каждой новой операции, отображение исходной и конвертированных валют, аналитика на реальных транзакциях по периоду/категориям/счетам/дням/крупным операциям, интерактивные фильтры и экспорт CSV/JSON. Добавлены unit-тесты этапа 4 и Playwright smoke-сценарий с сохранением screenshot-артефакта.
+
+Проверки: `npm test` — 4 файла, 19 тестов; `npm run build` — успешно; полный Playwright — 3 теста успешно; screenshot: `output/playwright/stage4-statistics.png`.
+
+### Дизайн-критерии
+
+Курс, источник, время обновления, fallback и аналитические графики должны быть читаемыми в том же dashboard shell на desktop и iPhone; легенды и валюты не должны зависеть только от цвета.
+
+### Цель
+
+Добавить автоматическую конвертацию RUB/USD и рабочую статистику на реальных данных.
+
+### Что реализовать
+
+1. Подключить реальный Currency API с CORS-доступом из браузера.
+2. Вынести провайдера курсов в отдельный адаптер.
+3. Запрашивать курс при запуске и с контролем частоты запросов.
+4. Кэшировать последний успешный курс.
+5. Показывать время, источник и актуальность курса.
+6. Использовать fallback на последний сохранённый курс.
+7. Для каждой новой операции сохранять курс на момент записи.
+8. Показывать баланс:
+   - в исходной валюте;
+   - в RUB;
+   - в USD.
+9. Реализовать статистику:
+   - доходы;
+   - расходы;
+   - разница;
+   - категории;
+   - счета;
+   - дни и месяцы;
+   - сравнение периодов;
+   - крупные операции.
+10. Добавить интерактивные фильтры графиков.
+11. Добавить экспорт CSV и JSON.
+
+### Автоматические тесты
+
+- разбор ответа Currency API;
+- обработка неизвестной валюты;
+- обработка timeout и HTTP errors;
+- кэширование курса;
+- fallback на старый курс;
+- конвертация RUB → USD;
+- конвертация USD → RUB;
+- отсутствие пересчёта исторического курса;
+- расчёт статистики по категориям;
+- расчёт статистики по счетам;
+- сравнение текущего и предыдущего периода;
+- CSV export;
+- JSON export;
+- E2E: добавить RUB-операцию → обновить курс → увидеть значения в обеих валютах;
+- E2E: применить фильтр статистики → проверить изменение графиков и итогов.
+
+### Критерий выхода
+
+Все суммы и графики строятся на реальных данных. При недоступном API приложение не ломается и явно показывает, что используется кэшированный курс.
+
+---
+
+## Этап 5. Production UX, PWA и отказоустойчивость
+
+### Дизайн-критерии
+
+Onboarding, настройки, offline/pending sync и все error/empty states получают те же glass surfaces, focus states, touch-targets, safe areas и reduced-motion поведение.
+
+### Цель
+
+Довести интерфейс до полноценного iPhone-приложения и закрыть все сценарии ошибок.
+
+### Что реализовать
+
+1. Создать production Web App Manifest.
+2. Настроить название, иконки, цвет темы и manifest ID.
+3. Настроить Service Worker.
+4. Кэшировать application shell.
+5. Обеспечить запуск и ввод данных офлайн.
+6. Реализовать экран onboarding.
+7. Реализовать экран настроек:
+   - профиль Google;
+   - таблица синхронизации;
+   - ручная синхронизация;
+   - повторная авторизация;
+   - курсы валют;
+   - категории;
+   - счета;
+   - тема;
+   - экспорт;
+   - восстановление.
+8. Реализовать все состояния интерфейса:
+   - loading;
+   - empty state;
+   - validation error;
+   - offline;
+   - sync pending;
+   - API error;
+   - success confirmation.
+9. Добавить подтверждение опасных действий.
+10. Реализовать доступность:
+    - достаточный контраст;
+    - keyboard navigation;
+    - aria-labels;
+    - большие touch-targets;
+    - поддержка reduced motion.
+11. Проверить Liquid Glass на разных темах и размерах экранов.
+12. Добавить error boundary и безопасный журнал ошибок без финансовых секретов.
+
+### Автоматические тесты
+
+- Service Worker регистрируется;
+- manifest содержит обязательные поля;
+- приложение открывается в offline mode;
+- offline quick-add;
+- восстановление после обновления страницы;
+- отображение empty states;
+- отображение network errors;
+- повторная синхронизация после восстановления сети;
+- подтверждение удаления;
+- доступность основных кнопок;
+- адаптивные тесты для iPhone viewport;
+- E2E onboarding;
+- E2E смена темы;
+- E2E ручная синхронизация;
+- E2E отключение сети → добавление операции → включение сети → синхронизация.
+
+### Критерий выхода
+
+Приложение можно установить на iPhone, запустить офлайн, добавить данные, вернуть сеть и дождаться синхронизации без потери информации.
+
+---
+
+## Этап 6. Production-релиз и окончательная проверка
+
+### Локальная verification update — выполнено 2026-07-18
+
+Подготовлен release gate и закрыты локальные проверки, доступные без внешних аккаунтов и физического iPhone:
+
+- Добавлены `typecheck`, `lint`, `format:check` и `release:check` в `package.json`.
+- Добавлен автоматический release-check без `TODO`, `FIXME`, demo/mock markers в production source и с проверкой обязательных build-артефактов.
+- Добавлен GitHub Actions workflow: `npm ci`, typecheck, lint, unit/integration tests, production build, format/release checks и GitHub Pages deployment.
+- Vite, manifest, Service Worker и runtime asset paths подготовлены к GitHub Pages base path через `BASE_PATH`; добавлен SPA `404.html` при deployment.
+- Убраны статические значения курса и прогресса с overview; отображаются реальные локальные данные или честный статус отсутствия курса.
+- Убраны нерабочие декоративные действия из проверенного overview flow; статусные кнопки показывают реальное состояние сети.
+- Добавлен desktop/iPhone release smoke с проверкой manifest, отсутствия горизонтального переполнения и сохранением screenshot-артефактов.
+
+Проверки выполнены локально:
+
+- `npm test`: 19/19;
+- `npm run e2e`: 5/5;
+- `npm run typecheck`: успешно;
+- `npm run lint`: успешно;
+- `npm run format:check`: успешно;
+- `npm run build`: успешно;
+- `npm run release:check`: успешно;
+- GitHub Pages build с `BASE_PATH=/finance-pwa/`: успешно, assets/manifest/Service Worker имеют корректный base path.
+
+Остаются внешние release gates: проверка GitHub Actions в подключённом репозитории, production OAuth consent screen и redirect URI, реальная Google Sheets синхронизация на production origin, публикация Pages, проверка на физическом iPhone Safari/standalone PWA и multi-device recovery.
+
+### Дизайн-критерии
+
+Перед релизом обязательны визуальный smoke-test desktop/mobile, проверка standalone PWA, клавиатуры, контрастности, переполнений и отсутствия пустых экранов у реализованных функций.
+
+### Цель
+
+Получить полностью готовое к деплою приложение без заглушек, демо-режима и незаконченных функций.
+
+### Что реализовать и проверить
+
+1. Удалить все demo-data, mock API и временные обработчики.
+2. Проверить отсутствие `TODO`, `FIXME` и пустых event handlers.
+3. Выполнить TypeScript typecheck.
+4. Выполнить lint.
+5. Выполнить formatter check.
+6. Собрать production build.
+7. Проверить размер и содержимое build.
+8. Проверить реальные OAuth redirect URI и authorized origins.
+9. Проверить Google OAuth consent screen.
+10. Проверить Google Drive и Sheets scopes.
+11. Проверить GitHub Pages base path.
+12. Проверить cache headers и Service Worker update strategy.
+13. Выполнить полный E2E-проход:
+    - первый вход;
+    - создание таблицы;
+    - создание счёта;
+    - добавление дохода;
+    - добавление расхода;
+    - перевод;
+    - собственная категория;
+    - бюджет;
+    - финансовая цель;
+    - курс валют;
+    - статистика;
+    - редактирование;
+    - удаление;
+    - офлайн;
+    - синхронизация;
+    - вход с другого устройства;
+    - восстановление данных.
+14. Проверить реальный iPhone Safari.
+15. Проверить установленный PWA-режим.
+16. Проверить тёмную и светлую темы.
+17. Проверить ошибки Google API и Currency API.
+18. Проверить повторную авторизацию.
+19. Настроить GitHub Actions CI.
+20. Выполнить production deployment на GitHub Pages.
+21. После деплоя пройти smoke-тест по production URL.
+22. Зафиксировать версию схемы и подготовить план миграции.
+
+### Автоматические тесты
+
+- полный unit test suite;
+- полный integration test suite;
+- полный component test suite;
+- полный Playwright E2E suite;
+- production build test;
+- deploy smoke test;
+- PWA manifest test;
+- Service Worker test;
+- OAuth configuration test;
+- Google Sheets contract test;
+- Currency API contract test;
+- offline/online test;
+- multi-device sync test;
+- regression test всех функций предыдущих этапов;
+- проверка отсутствия demo-mode и mock-реализаций в production build.
+
+### Финальный критерий готовности
+
+Релиз считается готовым только если:
+
+- все кнопки нажимаются и выполняют реальную функцию;
+- все окна и экраны прорисованы;
+- нет заглушек и демо-режима;
+- нет фальшивых данных;
+- Google OAuth работает;
+- таблица реально создаётся и синхронизируется;
+- локальный режим работает без интернета;
+- операции, переводы, счета, категории, бюджеты и цели редактируются;
+- RUB/USD конвертация работает;
+- статистика строится на данных пользователя;
+- ошибки обрабатываются;
+- все автоматические тесты проходят;
+- production build опубликован на GitHub Pages;
+- приложение проверено на iPhone.
+
+После выполнения этого этапа приложение можно считать полноценным production-продуктом, а не прототипом.
