@@ -28,6 +28,14 @@ Every visible feature must have loading, success, validation/error, empty and of
 
 The reference-aligned shell and all 10 screen entry points are implemented. Pixel-level parity still requires iterative browser screenshot comparison at the target desktop and iPhone dimensions. Google OAuth remains environment-dependent: the configured client must accept the exact current origin and `/oauth/callback` redirect URI.
 
+## Reference UI polish update — 2026-07-18
+
+Implemented a shared tokenized Liquid Glass layer across the ten screen entry points: navy depth, responsive four-column desktop composition, one-column iPhone layout, safe-area spacing, glass fallbacks, unified focus states, reduced-motion/reduced-transparency handling, and a single visual treatment for cards, controls, modals, charts, sync notices and navigation. Empty analytics states now explicitly depend on real local transactions.
+
+Added visible soft-delete actions for accounts, categories, budgets, goals, transfers and goal allocations while preserving UUID, `updatedAt`, `deletedAt`, IndexedDB and sync queue contracts. Added transfer and allocation history surfaces so those entities are no longer hidden behind forms.
+
+Verification after this pass: `npm run typecheck`, `npm test` (20 tests including the App shell component test), `npm run e2e` (5 tests), `npm run build`, `npm run format:check`, and `npm run release:check` all pass. Local browser screenshots were checked at desktop and 390x844 iPhone portrait. Production GitHub Pages and real-device standalone PWA still require deployment/device verification.
+
 ## Stage 3 verification update — completed 2026-07-18
 
 Local test configuration is now present in `.env.local` for the supplied web OAuth client ID. The intended authorized JavaScript origin is `http://localhost:5173`.
